@@ -1,99 +1,118 @@
-# Data Analysis of Signal Peptide Datasets
+# Data Analysis of Signal Peptides
 
-This section describes the exploratory analysis carried out on the curated dataset before feature extraction and model building. The purpose of this step was to verify that the training and benchmark sets were biologically coherent, comparable to one another, and suitable for downstream prediction tasks.
+## Introduction
 
-All analyses in this step were generated from the processed dataset in `../2.Data_Preparation/train_bench.tsv` using `plots.ipynb`.
+Signal peptides (SPs) are short N-terminal regions that direct newly synthesized proteins toward the secretory pathway. After targeting, these peptides are usually removed by signal peptidases. Because of their biological role, they represent an important signal for distinguishing secreted proteins from proteins that remain in other cellular compartments.
 
----
-
-## What was analyzed
-
-The exploratory analysis focused on five main questions:
-
-1. Do proteins with and without signal peptides differ in overall sequence length?
-2. Are signal peptide lengths consistent across training and benchmark sets?
-3. Does the amino acid composition of signal peptides reflect known biological properties?
-4. Is the dataset taxonomically representative after preprocessing and splitting?
-5. Do cleavage-site motifs show the expected conserved pattern?
-
-Only the most representative figures are included below.
+In this project, the data analysis step was carried out to examine the properties of proteins with and without signal peptides before applying predictive methods. The aim was to verify that the dataset was biologically meaningful, to compare the positive and negative classes, and to identify the sequence patterns that could later support approaches such as the **von Heijne method** and **SVM-based classification**.
 
 ---
 
-## 1. Protein sequence length
+## Workflow Overview
 
-The first analysis compares the length of full protein sequences in the training and benchmark sets. Because a limited number of very long proteins can compress the scale, filtered distribution plots were used to make the central trends easier to interpret.
+The analysis was performed on the processed dataset generated after the data collection and preprocessing steps. In particular, the input file used in this stage was:
 
-### Training set
-![Protein length distribution in training set](./1,2.Sequence_lengths_comparison/Distribution_plot_training_distribution.png)
+- `../2.Data_Preparation/train_bench.tsv`
 
-### Benchmark set
-![Protein length distribution in benchmark set](./1,2.Sequence_lengths_comparison/Distribution_plot_benchmark.png)
+This file contains proteins divided into:
 
-### Interpretation
+- five subsets for training and validation
+- one independent benchmark set
 
-These plots show that the positive and negative classes do not have exactly the same length profile. Negative proteins cover a broader range and include more long sequences, whereas positive proteins tend to be somewhat more compact. The benchmark set follows the same overall pattern observed in training, which suggests that the split is structurally consistent and appropriate for later model evaluation.
+The data analysis focused on the following aspects:
 
----
+- **protein sequence length distribution**
+- **signal peptide length distribution**
+- **amino acid composition**
+- **taxonomic classification**
+- **cleavage-site motif visualization**
 
-## 2. Signal peptide length
+The analyses and figures were generated in:
 
-For positive proteins, the annotated `SPEnd` position was used to examine the distribution of signal peptide lengths. This step was included to verify that the positive class reflects the expected biological size range of signal peptides.
-
-![Signal peptide length in training and benchmark sets](./1,2.Sequence_lengths_comparison/sp_length_train_vs_bench.png)
-
-### Interpretation
-
-Most signal peptides fall within the expected range, with the main peak around 20–25 residues. The similarity between training and benchmark distributions is important because it indicates that the evaluation set was not drawn from a substantially different positive population.
+- `plots.ipynb`
 
 ---
 
-## 3. Amino acid composition
+### 1. Protein Length Distribution
 
-The amino acid composition of signal peptide regions was then compared with Swiss-Prot reference frequencies. This analysis helps determine whether the dataset captures the characteristic enrichment of hydrophobic residues in signal peptides.
+**Goal:** Compare the distribution of full protein lengths between proteins with signal peptides and proteins without signal peptides.
 
-![Training SP frequencies vs Swiss-Prot](./3.AA_Comparison/frequencies_sp_train_vs_swissprot.png)
+**Method:** Sequence lengths were extracted from the processed dataset and compared between positive and negative classes in both the **training** and **benchmark** sets. Since a few very long proteins can dominate the scale, filtered distribution plots were used to make the main patterns easier to interpret.
 
-### Interpretation
+#### Training set
+![Protein length - Training](./1,2.Sequence_lengths_comparison/Distribution_plot_training_distribution.png)
 
-The composition profile shows the expected enrichment in hydrophobic residues, which is one of the defining features of signal peptides. This is biologically consistent with their role in membrane targeting and supports the use of residue composition as an informative feature in later prediction models.
+#### Benchmark set
+![Protein length - Benchmark](./1,2.Sequence_lengths_comparison/Distribution_plot_benchmark.png)
 
----
-
-## 4. Taxonomic composition
-
-To check whether preprocessing and splitting altered the biological composition of the dataset, the proteins were grouped by kingdom and visualized in the training and benchmark partitions.
-
-![Kingdom distribution in training and benchmark sets](./4.Taxonomy_classification/kingdom_barplot_train.png)
-
-### Interpretation
-
-The dataset is dominated by eukaryotic groups, especially Metazoa, with additional representation from Fungi, Viridiplantae, and other eukaryotic categories. The benchmark set remains broadly consistent with the training data, reducing the risk that later evaluation results are driven by an unintended taxonomic shift.
+**Interpretation:**  
+The distributions show that the two classes do not have identical length profiles. Negative proteins cover a wider range of sequence lengths and include more long proteins, whereas positive proteins tend to be somewhat more compact. The benchmark set follows the same general trend observed in the training data, indicating that the split remains consistent and suitable for model evaluation.
 
 ---
 
-## 5. Cleavage-site sequence logo
+### 2. Signal Peptide Length Distribution
 
-Finally, a sequence logo was generated from aligned windows around the annotated cleavage sites in the positive proteins. This provides a compact visual summary of residue preferences near the cleavage region.
+**Goal:** Examine the variability of signal peptide lengths in the positive dataset.
 
-![Training cleavage-site sequence logo](./5.SequenceLogo/sequence_logo_training.png)
+**Method:** For proteins in the positive class, the signal peptide end position (`SPEnd`) was used to estimate signal peptide length. These lengths were then compared between the training and benchmark sets.
 
-### Interpretation
+![Signal peptide length - Training vs Benchmark](./1,2.Sequence_lengths_comparison/sp_length_train_vs_bench.png)
 
-The sequence logo highlights conserved residue preferences around the cleavage site, including enrichment of small, neutral residues close to the cleavage position. This agrees with the known biological rules of signal peptide processing and confirms that the positive annotations are coherent and suitable for downstream modeling.
+**Interpretation:**  
+Most signal peptides fall within the expected biological range, with the majority concentrated around 20–25 amino acids. This agrees with the known structure of signal peptides and supports the reliability of the annotations used in the dataset. The similarity between training and benchmark sets also suggests that the positive class is consistently represented across the split.
 
 ---
 
-## Final remarks
+### 3. Amino Acid Composition
 
-Overall, the exploratory analysis shows that the dataset is biologically plausible and well structured for the next stages of the project. The main properties expected for signal peptides are clearly visible:
+**Goal:** Identify compositional biases in signal peptide regions compared with a general protein background.
 
-- realistic signal peptide length distribution
-- amino acid composition distinct from general protein background
-- conserved cleavage-site motif
-- comparable training and benchmark sets after preprocessing
+**Method:** Amino acid frequencies were computed from signal peptide sequences and compared with Swiss-Prot reference frequencies. This analysis was used to determine whether the dataset reproduced the expected residue preferences of signal peptides.
 
-This step therefore provides a solid descriptive basis for feature extraction, position-specific scoring approaches, and machine-learning models.
+![Amino acid composition compared with Swiss-Prot](./3.AA_Comparison/frequencies_sp_train_vs_swissprot.png)
+
+**Interpretation:**  
+The composition profile shows a clear enrichment in hydrophobic residues, which is one of the most characteristic properties of signal peptides. This result is biologically expected, since signal peptides must interact with membrane-associated translocation machinery. The observed enrichment confirms that residue composition is likely to be informative for downstream prediction methods.
+
+---
+
+### 4. Taxonomic Classification
+
+**Goal:** Assess whether the dataset remains biologically representative after preprocessing and splitting.
+
+**Method:** Proteins were grouped according to their kingdom labels and their distribution was visualized for the training and benchmark sets.
+
+![Kingdom distribution - Training](./4.Taxonomy_classification/kingdom_barplot_train.png)
+
+**Interpretation:**  
+The dataset is largely composed of eukaryotic groups, especially **Metazoa**, with additional representation from **Fungi**, **Viridiplantae**, and other eukaryotic categories. This matches the original data collection strategy. The taxonomic composition observed after preprocessing indicates that the dataset remains biologically coherent and that the benchmark set broadly reflects the same structure as the training data.
+
+---
+
+### 5. Cleavage Site Sequence Logos
+
+**Goal:** Visualize residue conservation around signal peptide cleavage sites.
+
+**Method:** Sequence windows surrounding the annotated cleavage sites were aligned and represented as sequence logos. These logos summarize position-specific residue preferences in the region most directly involved in signal peptide processing.
+
+![Cleavage site sequence logo](./5.SequenceLogo/sequence_logo_training.png)
+
+**Interpretation:**  
+The sequence logo shows conserved residue preferences around the cleavage site, especially the presence of small and neutral residues close to the cleavage position. This agrees with the known biological rules governing signal peptide cleavage and provides further evidence that the positive dataset is coherent and suitable for later modeling.
+
+---
+
+## Conclusion
+
+This analysis provided a descriptive overview of the dataset used for signal peptide prediction. The results show that the processed data are biologically plausible and consistent with the known properties of signal peptides. In particular:
+
+- the sequence length distributions remain comparable between training and benchmark sets
+- signal peptide lengths fall within the expected biological range
+- amino acid composition reflects the strong hydrophobic character of signal peptides
+- taxonomic composition remains coherent after preprocessing
+- cleavage-site motifs show recognizable conserved patterns
+
+Together, these results confirm that the dataset is suitable for the next stages of the project, including feature extraction, the application of von Heijne-based rules, and machine-learning classification.
 
 ---
 
@@ -105,7 +124,7 @@ This step therefore provides a solid descriptive basis for feature extraction, p
 **Input dataset**
 - `../2.Data_Preparation/train_bench.tsv`
 
-**Figure folders**
+**Output figure folders**
 - `1,2.Sequence_lengths_comparison/`
 - `3.AA_Comparison/`
 - `4.Taxonomy_classification/`
