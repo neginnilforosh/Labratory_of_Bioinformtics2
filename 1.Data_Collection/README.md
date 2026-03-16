@@ -78,10 +78,10 @@ https://rest.uniprot.org/uniprotkb/search?format=json&query=%28%28fragment%3Afal
 To automate the retrieval process and refine the datasets, two Jupyter notebooks were developed:
 
 - [get_dataset_neg.ipynb](./get_dataset_neg.ipynb)  
-  Used for the **positive dataset**
+  Used for the **negative dataset**
 
 - [get_dataset_pos.ipynb](./get_dataset_pos.ipynb)  
-  Used for the **negative dataset**
+  Used for the **positive dataset**
 
 These notebooks perform the API requests to UniProt, export the results in both `.tsv` and `.fasta` formats, and apply additional filtering criteria.
 
