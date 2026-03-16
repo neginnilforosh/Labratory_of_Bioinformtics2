@@ -114,18 +114,4 @@ This analysis provided a descriptive overview of the dataset used for signal pep
 
 Together, these results confirm that the dataset is suitable for the next stages of the project, including feature extraction, the application of von Heijne-based rules, and machine-learning classification.
 
----
 
-## Files used in this step
-
-**Main notebook**
-- `plots.ipynb`
-
-**Input dataset**
-- `../2.Data_Preparation/train_bench.tsv`
-
-**Output figure folders**
-- `1,2.Sequence_lengths_comparison/`
-- `3.AA_Comparison/`
-- `4.Taxonomy_classification/`
-- `5.SequenceLogo/`
