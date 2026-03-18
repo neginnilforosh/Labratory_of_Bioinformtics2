@@ -11,20 +11,7 @@ This repository implements the complete **feature extraction and selection workf
 
 The final goal is to identify a compact, robust subset of physicochemical and positional features derived from amino acid sequences that best discriminates the two protein classes, and to train an SVM classifier on those features.
 
----
 
-## Repository Structure
-
-```
-.
-├── custom_features.ipynb          # Feature extraction function definitions
-├── feauture_selection.ipynb       # Cross-validation, feature selection, SVM training
-├── training_features_{1..5}.npz  # Precomputed training feature matrices per fold
-├── validation_features_{1..5}.npz# Precomputed validation feature matrices per fold
-├── testing_features_{1..5}.npz   # Precomputed testing feature matrices per fold
-└── ../2.Data_Preparation/
-    └── train_bench.tsv            # Source dataset with sequences, labels, and fold assignments
-```
 
 Each `.npz` file stores two arrays:
 - `matrix` — feature matrix of shape `(n_samples, n_features)`
@@ -284,32 +271,3 @@ The 15 features below appeared in the top-`k` subset for **every one of the 5 cr
 | 14 | M residue frequency | Methionine fraction |
 | 15 | Max hydrophobicity (Argos) | Peak Argos-scale hydrophobicity |
 
----
-
-## 5. Dependencies
-
-```
-numpy
-pandas
-biopython
-scikit-learn
-matplotlib
-seaborn
-import_ipynb
-```
-
-Install with:
-```bash
-pip install numpy pandas biopython scikit-learn matplotlib seaborn import_ipynb
-```
-
----
-
-## 6. How to Reproduce
-
-1. Ensure `train_bench.tsv` is located at `../2.Data_Preparation/train_bench.tsv`.
-2. Run `custom_features.ipynb` first (or simply import it — it is used as a module via `import_ipynb`).
-3. Run `feauture_selection.ipynb`:
-   - The first code block generates all `.npz` feature files.
-   - The second code block performs feature selection, SVM training, and prints test MCC per fold.
-   - The final cell prints the features that will be used for training the final model.
