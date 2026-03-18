@@ -36,9 +36,9 @@ The notebook `create_pswm.ipynb` builds the Position-Specific Weight Matrix.
 
 2. **Apply pseudocounts**  
    A value of +1 is added to each count to avoid zero probabilities:
-   \
+   
    f_{i,a} = \frac{count_{i,a} + 1}{N + 20}
-   \
+   
 
 3. **Background normalization**  
    Frequencies are compared against SwissProt background amino acid frequencies.
