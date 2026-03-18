@@ -141,31 +141,7 @@ This provides a robust estimate of model generalization.
 | Accuracy     | 0.691 ± 0.014 |
 | Sensitivity  | 0.711 ± 0.029 |
 
----
 
-## Outputs and Visualization
-
-The `Plots/` directory contains:
-- PSWM heatmaps (amino acid enrichment patterns)  
-- Precision–Recall curves per fold  
-- Combined PR curve visualization  
-
-These plots help interpret both model performance and biological signal structure.
-
----
-
-## Usage
-
-1. Run PSWM construction:
-   - `create_pswm.ipynb`
-
-2. Perform validation and testing:
-   - `validation_and_testing_vonheijne.ipynb`
-
-3. Execute full cross-validation:
-   - `vonheijne.ipynb`
-
----
 
 ## Key Idea
 
