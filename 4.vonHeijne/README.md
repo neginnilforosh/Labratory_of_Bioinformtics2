@@ -96,16 +96,3 @@ Evaluate predictions using:
 | Accuracy     | 0.691 ± 0.014 |
 | Sensitivity  | 0.711 ± 0.029 |
 
----
-
-## Usage
-
-1. Run `create_pswm.ipynb`  
-2. Run `validation_and_testing_vonheijne.ipynb`  
-3. Run `vonheijne.ipynb`  
-
----
-
-## Key Idea
-
-The method identifies cleavage sites by maximizing a log-odds score derived from positional amino acid enrichment relative to a background model.
