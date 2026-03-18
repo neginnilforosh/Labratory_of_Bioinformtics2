@@ -291,45 +291,4 @@ Identified via Ray Tune random search (15 trials), maximising average 5-fold MCC
 | Optimiser | Adam |
 | Threshold | 0.5 |
 
----
 
-## Dependencies
-
-```
-torch
-numpy
-pandas
-scikit-learn
-matplotlib
-seaborn
-biopython
-ray[tune]
-logomaker
-```
-
-Install all with:
-```bash
-pip install torch numpy pandas scikit-learn matplotlib seaborn biopython "ray[tune]" logomaker
-```
-
----
-
-## How to Run
-
-**Step 1 — Hyperparameter search (optional, already done)**
-```
-Open lstm.ipynb and run all cells.
-The best configuration is printed at the end.
-It is already hardcoded in benchmark_test.ipynb.
-```
-
-**Step 2 — Final training and evaluation**
-```
-Open benchmark_test.ipynb and run all cells top to bottom.
-No other files are needed — the notebook is fully self-contained.
-Figures are saved to model_evaluation/
-The trained model is saved as SignalPeptideLSTM.pt
-```
-
-> **Expected runtime on CPU:** Step 2 takes approximately 5–15 minutes.  
-> Step 1 (HPO, 15 trials × 5 folds) can take 2–4 hours on CPU and is not required if you use the provided best configuration.
