@@ -1,61 +1,138 @@
-# The Von Heijne method for SP detection
+# The Von Heijne Method for Signal Peptide Detection
 
-This repository implements the construction of a **Position-Specific Weight Matrix (PSWM)** using experimentally validated protein sequences. These are compared against background amino acid frequencies derived from SwissProt. A pseudocount of +1 is applied in order to avoid zero probabilities.
+## Overview
+This repository implements the Von Heijne method for predicting signal peptide (SP) cleavage sites using a Position-Specific Weight Matrix (PSWM). The approach is based on statistical enrichment of amino acids around experimentally validated cleavage sites.
 
-The implementation is based on the following parameters:
-- **Amino acid window**: [-13, +2] relative to the cleavage site  
-- **Background distribution**: SwissProt amino acid frequencies  
-- **PSWM**: constructed from positive examples (proteins with confirmed signal peptides)  
-- **Objective**: identification of likely cleavage sites through comparison between observed amino acid frequencies and the background model  
+The pipeline includes:
+1. PSWM construction from annotated sequences  
+2. Scoring of candidate cleavage sites  
+3. Threshold optimization  
+4. Performance evaluation and cross-validation  
 
 ---
 
-## PSWM implementation
+## Methodological Framework
 
-The notebook [create_pswm.ipynb](./create_pswm.ipynb) is used to construct the Position-Specific Weight Matrix (PSWM) from a training dataset of proteins with annotated signal peptides provided in *train_bench.tsv*.
-
-The input DataFrame is required to include:
+### 1. Dataset and Preprocessing
+The model is trained using a dataset (*train_bench.tsv*) containing:
 - Protein sequences  
-- Cleavage site index (SPEnd)  
+- Annotated cleavage site index (`SPEnd`)  
+
+For each sequence, a fixed window of amino acids is extracted relative to the cleavage site:
+- Positions: **[-13, +2]**
+- This results in a window of 15 residues centered around the cleavage region  
+
+This window captures the biological signal known to characterize signal peptides.
 
 ---
 
-## Evaluation of the Von Heijne method
+### 2. PSWM Construction
 
-The script [validation_and_testing_vonheijne](./validation_and_testing_vonheijne) contains the implementation for evaluating the performance of the Von Heijne algorithm in predicting signal peptide cleavage sites.
+The notebook `create_pswm.ipynb` builds the Position-Specific Weight Matrix.
 
-The evaluation procedure is structured in three main stages:
+#### Step-by-step:
+1. **Count frequencies**  
+   For each position in the window, count occurrences of each amino acid across all training sequences.
 
-### 1. Scoring using the PSWM
-Each sequence is scanned using a sliding window of approximately 14–15 amino acids. For each window, a score is computed as the sum of log-odds values derived from the PSWM. The window with the highest score is selected as the predicted cleavage site.
+2. **Apply pseudocounts**  
+   A value of +1 is added to each count to avoid zero probabilities:
+   \[
+   f_{i,a} = \frac{count_{i,a} + 1}{N + 20}
+   \]
 
-### 2. Threshold optimization (validation set)
-Precision–Recall curves are computed on the validation dataset. The optimal threshold is determined by maximizing the F1-score.
+3. **Background normalization**  
+   Frequencies are compared against SwissProt background amino acid frequencies.
 
-### 3. Testing and performance metrics
-Predictions on the test dataset are evaluated using the following metrics:
+4. **Log-odds transformation**  
+   The PSWM is computed as:
+   \[
+   PSWM_{i,a} = \log \left( \frac{f_{i,a}}{p_a^{background}} \right)
+   \]
+
+This matrix encodes positional enrichment or depletion of amino acids.
+
+---
+
+### 3. Cleavage Site Scoring
+
+Implemented in `validation_and_testing_vonheijne.ipynb`.
+
+#### Procedure:
+1. A sliding window (~15 amino acids) is moved along each protein sequence  
+2. For each window:
+   - Extract amino acids at each position  
+   - Sum corresponding PSWM log-odds scores:
+     \[
+     Score = \sum_{i=-13}^{+2} PSWM_{i, a_i}
+     \]
+3. The window with the **maximum score** is selected as the predicted cleavage site  
+
+This corresponds to a maximum likelihood estimate under the PSWM model.
+
+---
+
+### 4. Threshold Optimization (Validation Phase)
+
+Raw scores must be converted into binary predictions.
+
+#### Steps:
+1. Apply scoring to validation set  
+2. Generate Precision–Recall (PR) curve  
+3. Compute F1-score for different thresholds:
+   \[
+   F1 = 2 \cdot \frac{Precision \cdot Recall}{Precision + Recall}
+   \]
+4. Select threshold that maximizes F1-score  
+
+This ensures a balance between false positives and false negatives.
+
+---
+
+### 5. Testing and Performance Evaluation
+
+Using the optimal threshold, predictions are evaluated on the test set.
+
+Metrics used:
+
 - **Matthews Correlation Coefficient (MCC)**  
+  Robust metric for imbalanced datasets  
+
 - **Accuracy (ACC)**  
+  Overall correctness  
+
 - **Precision (PPV)**  
+  Fraction of true positives among predicted positives  
+
 - **Recall (Sensitivity, SEN)**  
+  Fraction of true positives detected  
 
 ---
 
-## 5-Fold cross-validation
+### 6. 5-Fold Cross-Validation
 
-A more robust evaluation of the Von Heijne method is performed through 5-fold cross-validation on the *train_bench.tsv* dataset using [vonheijne](./vonheijne.ipynb).
+Implemented in `vonheijne.ipynb`.
 
-For each fold:
-- **Data splitting**: one subset is used for testing, one for validation, and the remaining three for training  
-- **PSWM computation**: a new matrix is constructed for each iteration using the training subsets  
-- **Evaluation**: performance metrics (MCC, PPV, ACC, SEN) are calculated on the test subset  
-- **Visualization**: Precision–Recall curves are generated, highlighting the optimal threshold selected from the validation subset  
+#### Workflow:
+1. Split dataset into 5 folds  
+2. For each iteration:
+   - 3 folds → training  
+   - 1 fold → validation  
+   - 1 fold → testing  
+
+3. Repeat full pipeline:
+   - Build PSWM  
+   - Optimize threshold  
+   - Evaluate on test set  
+
+4. Aggregate results across folds:
+   - Mean  
+   - Standard deviation  
+
+This provides a robust estimate of model generalization.
 
 ---
 
 ## Results
-
-Following cross-validation, the mean and standard deviation of each metric are reported:
 
 | Metric       | Mean ± Std     |
 |--------------|---------------|
@@ -63,3 +140,38 @@ Following cross-validation, the mean and standard deviation of each metric are r
 | Precision    | 0.934 ± 0.003 |
 | Accuracy     | 0.691 ± 0.014 |
 | Sensitivity  | 0.711 ± 0.029 |
+
+---
+
+## Outputs and Visualization
+
+The `Plots/` directory contains:
+- PSWM heatmaps (amino acid enrichment patterns)  
+- Precision–Recall curves per fold  
+- Combined PR curve visualization  
+
+These plots help interpret both model performance and biological signal structure.
+
+---
+
+## Usage
+
+1. Run PSWM construction:
+   - `create_pswm.ipynb`
+
+2. Perform validation and testing:
+   - `validation_and_testing_vonheijne.ipynb`
+
+3. Execute full cross-validation:
+   - `vonheijne.ipynb`
+
+---
+
+## Key Idea
+
+The Von Heijne method operates as a **probabilistic scoring model**, where:
+- Biological signal = positional amino acid bias  
+- Detection = maximizing log-odds score relative to background  
+
+It is simple, interpretable, and biologically grounded.
+
