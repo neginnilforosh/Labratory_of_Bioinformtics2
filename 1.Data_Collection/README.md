@@ -140,12 +140,4 @@ Each response returns up to 500 entries. The `get_next_link()` function reads th
 
 > The large imbalance between positive (2,932) and negative (20,615) sets is intentional and reflects biology — the majority of proteins are intracellular. This imbalance will be addressed in later steps through class weighting and careful evaluation metrics (MCC rather than accuracy).
 
----
 
-## 🔁 How to Run
-
-1. Open and run `get_dataset_pos.ipynb` — this creates `positive_dataset.tsv` and `positive_dataset.fasta`
-2. Open and run `get_dataset_neg.ipynb` — this creates `negative_dataset.tsv` and `negative_dataset.fasta`
-3. Open and run `output_recap.ipynb` to verify the counts
-
-> ⚠️ An active internet connection is required. The download may take several minutes depending on server load.
