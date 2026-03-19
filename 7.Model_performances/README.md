@@ -1,187 +1,76 @@
+# 🏆 Step 7 — Model Performance Comparison
 
-
-# 🧬 Signal Peptide Prediction
-### A Comparative Study: Von Heijne · SVM · Deep Learning
-
-
-*From handcrafted rules to end-to-end deep learning — a rigorous benchmark on protein signal peptide classification*
+> **What this folder does:** Brings all three models together — Von Heijne, SVM, and SP-NN — evaluates them on the same independent benchmark set, and performs a deep biological analysis of each model's errors to understand *why* misclassifications happen.
 
 ---
 
-## 📋 Table of Contents
+## 🗂️ Files in this Folder
 
-- [Overview](#-overview)
-- [Dataset](#-dataset)
-- [Methods](#-methods)
-- [Hyperparameter Optimization](#-hyperparameter-optimization)
-- [Results](#-results)
-- [Error Analysis — SVM](#-error-analysis--svm-model_evaluation)
-- [Error Analysis — Deep Learning](#-error-analysis--deep-learning-model_evaluation_dl)
-- [Feature Distributions](#-feature-wise-distributions-svm)
-- [Sequence Logos](#-sequence-logos)
-- [Running the Code](#-running-the-code)
-- [Dependencies](#-dependencies)
+| File | What it does |
+|------|-------------|
+| `hyperparameter_tuning.ipynb` | Fine-tunes the SVM using Bayesian search and saves the final trained model |
+| `model_evaluation_and_plots.ipynb` | Evaluates the SVM and Von Heijne method; generates all SVM error analysis figures |
+| `benchmark_test.ipynb` | Trains the final SP-NN with the optimal config; evaluates it and generates all DL error analysis figures |
+| `lstm.ipynb` | Defines SP-NN architecture and runs Ray Tune hyperparameter search (same as Step 6) |
 
----
+### Where figures are saved
 
-## 🔬 Overview
-
-Signal peptides are short N-terminal sequences (~15–30 amino acids) that route nascent proteins into the secretory pathway. Accurate computational prediction is a fundamental challenge in proteomics and drug discovery.
-
-This project benchmarks **three approaches of increasing complexity** on the same dataset and held-out benchmark, enabling a fair head-to-head comparison:
-
-```
-Protein Sequence (N-terminus)
-         │
-         ├─── Von Heijne Score  (PSWM)  ─────────────────► Binary Label
-         ├─── Feature Engineering  →  RBF SVM ───────────► Binary Label
-         └─── One-Hot Encoding  →  CNN → LSTM → MLP ──────► Binary Label
-```
-
-All output figures are saved automatically when the notebooks are run:
-- **`model_evaluation/`** — SVM and Von Heijne analysis plots
-- **`model_evaluation_DL/`** — SP-NN deep learning analysis plots
+| Folder | Model | Contents |
+|--------|-------|----------|
+| `model_evaluation/` | SVM + Von Heijne | All SVM and Von Heijne analysis figures |
+| `model_evaluation_DL/` | SP-NN | All deep learning analysis figures |
 
 ---
 
-## 📊 Dataset
+## 🧪 The Three Models Compared
 
-The dataset (`train_bench.tsv`) is partitioned into **5 cross-validation folds** and one **independent Benchmark set** withheld from all training and tuning:
-
-| Column | Description |
-|--------|-------------|
-| `Sequence` | Full amino acid sequence |
-| `Class` | `Positive` (has SP) / `Negative` (no SP) |
-| `Set` | Fold: `1`–`5` or `Benchmark` |
-| `SPStart` / `SPEnd` | Signal peptide cleavage boundaries |
-| `Kingdom` | Eukaryota · Bacteria · Viridiplantae · Archaea |
-| `HelixDomain` | `True` if sequence contains a transmembrane helix |
-
-> ⚠️ The benchmark is **never used during training or hyperparameter search** — it serves exclusively as the final unbiased evaluation set.
+| Model | Strategy | Feature engineering? | Training? |
+|-------|----------|:--------------------:|:---------:|
+| Von Heijne | Score sequences against a PSWM | No — uses cleavage-site statistics | No — rule-based |
+| SVM (RBF) | Classify 15 hand-crafted biochemical features | Yes — manual | Yes |
+| SP-NN (CNN+LSTM) | Learn directly from one-hot sequences | No — end-to-end | Yes |
 
 ---
 
-## 🧪 Methods
+## ⚙️ SVM Hyperparameter Tuning (`hyperparameter_tuning.ipynb`)
 
-### 1. Von Heijne Method
+The SVM from Step 5 used a simple grid search. Here, a more thorough **Bayesian optimisation** is applied using `BayesSearchCV` (60 iterations, 5-fold CV):
 
-A classical **Position-Specific Weight Matrix (PSWM)** scoring approach. The matrix is built from positive training sequences over a window of ±13/+2 residues around the cleavage site. A test sequence is classified as a signal peptide if its maximum PSWM score exceeds a threshold.
-
-**Strengths:** Interpretable, biologically motivated, no iterative training.  
-**Limitations:** Cannot model non-linear interactions or long-range dependencies.
-
----
-
-### 2. Support Vector Machine (SVM)
-
-An **RBF-kernel SVM** (`sklearn.Pipeline: StandardScaler → SVC`) trained on 18 hand-crafted biochemical descriptors per sequence:
-
-| Feature | Scale | Aggregation |
-|---------|-------|-------------|
-| Von Heijne score | PSWM | Max |
-| Hydrophobicity | Miyazawa (`mi`) | Mean over SP region |
-| Transmembrane tendency | Custom TM scale | Max |
-| Chou-Fasman helix propensity | Chou & Fasman 1978 | Mean |
-| Chou-Fasman β-sheet propensity | Chou & Fasman 1978 | Max |
-| Residue flexibility | Vihinen (`Flex`) | Max |
-| Membrane propensity | Punta-Maritan 2003 | Max |
-| Mean bulkiness | Zimmerman 1968 | Mean |
-| Hydrophobicity (Argos) | Argos (`ag`) | Max |
-| Amino acid frequencies | — | C, D, T, R, N, M |
-
-The Von Heijne feature (index 17) is recomputed using the full training PSWM before fitting to ensure consistency between training and benchmark encoding.
-
----
-
-### 3. SP-NN — Hybrid Deep Learning
-
-SP-NN processes raw sequences directly — **no feature engineering required**.
-
-**Encoding:** All sequences standardized to **90 residues** (padded with `X` or truncated from C-terminus), then encoded as a **21-dimensional one-hot vector** per position → `[90 × 21]` matrix.
-
-**Architecture:**
-
-```
-Input [Batch, 90, 21]
-    │
-    ▼
-Conv1D(in=21, out=64, kernel=17, padding='same')   ← kernel=17 ≈ SP hydrophobic core length
-    │
-    ▼
-LSTM(64 → 128, layers=2)  →  last hidden state  →  BatchNorm1D(128)
-    │
-    ▼
-MLP: Linear(128→256) → ReLU → Dropout
-     Linear(256→128) → ReLU → Dropout
-     Linear(128→ 64) → ReLU → Dropout
-     Linear( 64→1024)→ ReLU → Dropout    ← Hourglass: compress then expand
-     Linear(1024→  1)→ Sigmoid
-    │
-    ▼
-P(SP) ∈ [0,1]  →  threshold 0.5  →  {Positive, Negative}
-```
-
-| Design choice | Rationale |
-|--------------|-----------|
-| Conv1D kernel=**17** | Matches the typical length of the signal peptide hydrophobic core |
-| LSTM × 2 | Captures long-range sequential dependencies across the N-terminus |
-| Hourglass MLP `[256→128→64→1024]` | Compress-then-expand topology found optimal by hyperparameter search |
-| Gradient clipping (max_norm=1.0) | Prevents exploding gradients inherent to LSTM training |
-| Early stopping (patience=20) | Saves best-validation-MCC checkpoint, prevents overfitting |
-
-**Best configuration (from Ray Tune):**
+**Why Bayesian over grid search?** Bayesian optimisation builds a statistical model (surrogate) of the objective function as it evaluates configurations. Instead of testing random points or an exhaustive grid, it intelligently focuses on the most promising region of the search space — finding better parameters with fewer evaluations.
 
 ```python
-config = {
-    'hidden_sizes':     [256, 128, 64, 1024],
-    'lstm_hidden_size': 128,
-    'num_lstm_layers':  2,
-    'dropout':          0.498,
-    'lr':               2.86e-4,
-    'batch_size':       20,
-}
+bayes = BayesSearchCV(
+    estimator = Pipeline([("scaler", StandardScaler()), ("svm", SVC())]),
+    search_spaces = {
+        "svm__kernel": Categorical(["rbf"]),
+        "svm__C":     Real(0.01, 100, prior="log-uniform"),
+        "svm__gamma": Real(0.01, 100, prior="log-uniform"),
+    },
+    scoring = make_scorer(matthews_corrcoef),
+    cv = 5,
+    n_iter = 60,
+)
 ```
 
-The model is exported as a **TorchScript** `.pt` file — loadable anywhere without the original class definition.
+### Optimal hyperparameters found
+
+| Parameter | Search range | Best value | What it means |
+|-----------|-------------|:----------:|---------------|
+| `C` | [0.01, 100] | **0.6758** | Regularisation — controls margin width. Low C = wide, tolerant margin |
+| `γ (gamma)` | [0.01, 100] | **0.0350** | RBF kernel width. Low γ = each training point has a wide influence radius |
+| **Best CV MCC** | — | **0.8569** | Mean MCC across the 5 validation folds |
+
+> A low `C` and low `γ` together indicate the model needed a soft, wide-radius decision boundary — the feature space is separable but noisy, and tight boundaries would memorise the training data instead of generalising.
+
+The final SVM is saved as `SignalPeptideSVM.pkl` for use in evaluation.
 
 ---
 
-## ⚙️ Hyperparameter Optimization
+## 📊 Final Results on the Independent Benchmark Set
 
-### SVM — Bayesian Search (`BayesSearchCV`)
+All three models are evaluated on the benchmark set that was **never used during training or hyperparameter tuning**.
 
-60 iterations with 5-fold CV. Bayesian optimization builds a probabilistic surrogate of the objective and proposes the next configuration from the most promising region — far more efficient than grid or random search.
-
-**Optimal hyperparameters:**
-
-| Hyperparameter | Search Range | Best Value | Interpretation |
-|---------------|-------------|-----------|----------------|
-| `C` | [0.01, 100] log-uniform | **0.6758** | Soft margin — noisy feature space |
-| `γ (gamma)` | [0.01, 100] log-uniform | **0.0350** | Wide RBF — avoids tight overfitting |
-| **Best CV MCC** | — | **0.8569** | Validation performance |
-
-> A low `C` (0.68) with a low `γ` (0.035) indicates the SVM needed a wide, soft-margin classifier. The feature space is separable but noisy, and tight boundaries would overfit.
-
----
-
-### SP-NN — Ray Tune Random Search
-
-15 trials × 5-fold CV each. Ray's shared Object Store (`ray.put`) avoids memory explosion when distributing the one-hot encoded dataset across worker processes.
-
-| Parameter | Range | Best |
-|-----------|-------|------|
-| `num_layers` | {2, 3, 4, 5} | 4 |
-| MLP topology | Funnel / Flexible | Flexible (hourglass) |
-| `dropout` | [0.1, 0.5] uniform | 0.498 |
-| `lr` | [1e-4, 1e-3] log-uniform | 2.86e-4 |
-| `lstm_hidden_size` | {64, 128} | 128 |
-| `num_lstm_layers` | {1, 2} | 2 |
-
----
-
-## 🏆 Results
-
-All models evaluated on the **independent Benchmark set** (never seen during training or tuning). Primary metric: **MCC** — robust to class imbalance.
+### Performance table
 
 | Method | MCC | Notes |
 |--------|:---:|-------|
@@ -189,396 +78,175 @@ All models evaluated on the **independent Benchmark set** (never seen during tra
 | SVM (RBF) | 0.808 | +0.12 over Von Heijne |
 | **SP-NN (CNN+LSTM)** | **0.902** | **+0.09 over SVM** |
 
-**Interpretation:**
+### What MCC means
 
-- 🔵 **Von Heijne (0.688):** Captures cleavage-site residue preferences but cannot model non-linear interactions or sequence context beyond the immediate cleavage window.
-- 🟢 **SVM (0.808):** Properly engineered biochemical features and the RBF kernel together handle the non-linear separability in feature space that a linear PSWM score cannot.
-- 🟡 **SP-NN (0.902):** End-to-end learning avoids feature engineering entirely. The CNN captures local hydrophobic motifs; the LSTM models the full sequential context of the N-terminus — together learning a richer representation than any handcrafted descriptor set.
+MCC (Matthews Correlation Coefficient) ranges from **−1** (completely wrong) to **+1** (perfect). A score of **0** means the model is no better than random guessing. MCC is used instead of accuracy because the benchmark set has more negatives than positives — accuracy can be misleadingly high even with a poor model.
+
+### Why each model performs as it does
+
+- **Von Heijne (0.688):** Captures the AXA cleavage motif and hydrophobic core via the PSWM, but cannot model anything beyond the 15-residue cleavage window. It has no way to account for N-region basicity, full-sequence hydrophobicity, or taxonomic variation.
+
+- **SVM (0.808):** The 15 hand-crafted biochemical features encode much richer information than a PSWM alone — global hydrophobicity, transmembrane tendency, flexibility, and amino acid composition all contribute. The RBF kernel handles non-linear separability that the linear PSWM cannot.
+
+- **SP-NN (0.902):** End-to-end learning from raw sequences avoids the need for feature engineering entirely. The CNN kernel (size 17) directly detects the hydrophobic core in one operation; the LSTM captures the entire sequential context from the N-terminus; together they learn a richer representation than any handcrafted set could provide.
 
 ---
 
 ## 🔍 Error Analysis — SVM (`model_evaluation/`)
 
-Each benchmark prediction is labelled **TP / TN / FP / FN** and subjected to systematic biological analysis. Results are saved in the `model_evaluation/` directory.
+Each benchmark entry is labelled TP, TN, FP, or FN and the following analyses identify the biological causes of misclassification.
 
----
+### Transmembrane domain proteins and False Positives
 
-### Transmembrane Domain & False Positives
+**Hypothesis:** Transmembrane (TM) proteins are over-represented among false positives because their N-terminal hydrophobic TM helix closely resembles a signal peptide hydrophobic core — confusing the model.
 
-**Hypothesis:** Transmembrane (TM) proteins are over-represented among false positives because their N-terminal hydrophobic TM helix structurally resembles a signal peptide hydrophobic core.
-
-<div align="center">
-
-![Helix Domain Predictions](model_evaluation/HelixDomain_predictions.png)
-
-*Percentage of sequences with/without a transmembrane helix domain across all four prediction groups (TP, TN, FP, FN). False Positives are strongly enriched for HelixDomain=True, confirming the TM-helix confusion hypothesis.*
-
-</div>
-
-<div align="center">
-
-![HD Prediction 2](model_evaluation/HD_prediction_2.png)
-
-*Comparison of transmembrane helix prevalence between False Positives only (FP) and all negative-class sequences (TN+FP). The FP group has a disproportionately higher fraction of TM proteins, showing the SVM is specifically confused by TM helices.*
-
-</div>
-
----
+| Figure | What it shows |
+|--------|--------------|
+| `model_evaluation/HelixDomain_predictions.png` | Percentage of sequences with/without a TM helix across TP, TN, FP, FN. FP is strongly enriched for `HelixDomain=True` |
+| `model_evaluation/HD_prediction_2.png` | Direct comparison: FP only vs all Negatives (TN+FP). FP has a higher TM-helix fraction, confirming the hypothesis |
 
 ### Kingdom-level False Positive Rate
 
-<div align="center">
+| Figure | What it shows |
+|--------|--------------|
+| `model_evaluation/pieplot_kingdom_FPR.png` | FPR broken down by taxonomic kingdom. Plant sequences (Viridiplantae) are expected to show elevated FPR due to chloroplast **transit peptides** — N-terminal targeting sequences structurally similar to signal peptides |
 
-![FPR per Kingdom](model_evaluation/pieplot_kingdom_FPR.png)
+### Taxonomic composition of misclassifications
 
-*False Positive Rate (FPR) broken down by taxonomic kingdom. Plant sequences (Viridiplantae) are expected to show elevated FPR due to **chloroplast transit peptides** — N-terminal targeting sequences that are structurally similar to signal peptides and can fool the classifier.*
+| Figure | What it shows |
+|--------|--------------|
+| `model_evaluation/Taxa_composition_FP_FN.png` | Three pie charts side by side: total Positives, False Negatives, and True Positives — broken down by kingdom. Enrichment of a kingdom in the FN chart means its signal peptides are systematically harder to detect |
 
-</div>
+### Signal peptide length distribution
 
----
+| Figure | What it shows |
+|--------|--------------|
+| `model_evaluation/Signalength_distribution.png` | SP length (SPEnd − SPStart) for TP vs FN. FN sequences tend to have atypically short or long SPs — outside the 15–30 aa canonical range the model has learned |
 
-### Taxonomic Composition of Misclassifications
+### Hydrophobicity analysis
 
-<div align="center">
+| Figure | What it shows |
+|--------|--------------|
+| `model_evaluation/Hydrophobicity_distribution.png` | Distribution of mean hydrophobicity (Miyazawa scale) over the SP region — TP vs FN. FN sequences shift left (weaker hydrophobic core) |
+| `model_evaluation/Boxplot_hydrophobicity.png` | Boxplot version — the FN median is lower than TP |
+| `model_evaluation/Mean_hydrophobicity.png` | Mean hydrophobicity bar chart per group |
 
-![Taxa Composition](model_evaluation/Taxa_composition_FP_FN.png)
+### Amino acid frequency analysis
 
-*Three side-by-side pie charts: total positive sequences, False Negatives, and True Positives, broken down by kingdom. Enrichment of a particular kingdom in the FN chart indicates that kingdom's signal peptides are systematically harder to detect.*
+| Figure | What it shows |
+|--------|--------------|
+| `model_evaluation/AA_fequencies_3.png` | AA frequencies **within the SP region** (SPStart to SPEnd) — TP vs FN. FN SPs are enriched in polar/charged residues (S, T, N, C, R, D) at the expense of hydrophobic ones (L, A, V, I) |
+| `model_evaluation/figure9.png` | 4-group comparison: FP / all Negatives / FN / all Positives |
 
-</div>
+### Feature-wise distributions (SVM-specific)
 
----
+For the 15 most informative features, box plots and KDE curves compare TP, TN, FP, and FN groups:
 
-### Signal Peptide Length Distribution
+| Figure | Feature | Key finding |
+|--------|---------|-------------|
+| `model_evaluation/KDE_TranmembranP.png` | Max TM tendency | TP and FP share a high-propensity peak — TM helices mimic SP cores |
+| `model_evaluation/Boxplot_TRTE.png` | Max TM tendency | FP median ≈ TP median; confirms TM confusion |
+| `model_evaluation/Boxplot_Chou_Fasman.png` | Mean helix propensity | TP has higher helical tendency; FN are less helical |
+| `model_evaluation/Chou_Fasman_BProp.png` | Max β-sheet propensity | FP (TM proteins) show elevated β-sheet — structural signature of TM β-barrels |
+| `model_evaluation/Boxplot_ResidueFlex.png` | Max flexibility | FN sequences tend to be more flexible — disordered N-terminus |
+| `model_evaluation/Boxplot_PuntaMaritan.png` | Max membrane propensity | FP sequences have elevated membrane propensity vs TP |
+| `model_evaluation/boxplot_Bulkiness.png` | Mean bulkiness | TP sequences are bulkier (large hydrophobic residues L, I, V, F) |
+| `model_evaluation/Boxplot_ArgosMax.png` | Max Argos hydrophobicity | One of the strongest discriminators: TP >> TN; FN overlaps the low end of TP |
 
-<div align="center">
+### Sequence logos
 
-![SP Length Distribution](model_evaluation/Signalength_distribution.png)
+Sequences are aligned around the cleavage site (positions −13 to +4) and visualised as information-content logos:
 
-*Signal peptide length (SPEnd − SPStart) for correctly classified True Positives vs missed False Negatives. FN sequences tend to have atypically short or long signal peptides — deviating from the canonical 15–30 aa range that the model has learned to recognise.*
-
-</div>
-
----
-
-### Hydrophobicity Analysis
-
-<div align="center">
-
-![Hydrophobicity Distribution](model_evaluation/Hydrophobicity_distribution.png)
-
-*Distribution of mean hydrophobicity (Miyazawa scale) over the signal peptide region for TP vs FN sequences. FN sequences show a leftward shift — a weaker hydrophobic core is the most common reason signal peptides are missed.*
-
-</div>
-
-<div align="center">
-
-![Hydrophobicity Boxplot](model_evaluation/Boxplot_hydrophobicity.png)
-
-*Boxplot version of the same comparison. The median hydrophobicity of FN sequences is visibly lower than TP, reinforcing the finding that atypically hydrophilic signal peptides drive most false negatives.*
-
-</div>
-
-<div align="center">
-
-![Mean Hydrophobicity](model_evaluation/Mean_hydrophobicity.png)
-
-*Mean hydrophobicity per prediction group. Despite FN sequences having lower median hydrophobicity, the overall means between TP and FN are close — suggesting hydrophobicity alone is not sufficient to explain all false negatives.*
-
-</div>
+| Figure | Group | What to look for |
+|--------|-------|-----------------|
+| `model_evaluation/figure12A-1.png` | True Positives | Strong AXA motif at −3/−1; hydrophobic core (L/A/V) from −10 to −4 |
+| `model_evaluation/figure12A-2.png` | False Negatives | Weaker version of the TP motif — atypical SPs with less conserved core |
+| `model_evaluation/figure12A-3.png` | True Negatives | No structured motif — broad, unspecific residue distribution |
+| `model_evaluation/figure12A-4.png` | False Positives | Hydrophobic enrichment at −10 to −4 mimicking the SP core — these are TM helices |
 
 ---
 
-### Amino Acid Frequency Analysis
-
-<div align="center">
-
-![AA Frequencies SP](model_evaluation/AA_fequencies_3.png)
-
-*Relative amino acid frequencies **within the signal peptide region** (SPStart:SPEnd) for TP vs FN sequences. Residues are grouped by chemical class. FN signal peptides show enrichment in polar and charged residues (S, T, N, C, R, D) at the expense of canonical hydrophobic residues (L, A, V, I).*
-
-</div>
-
-<div align="center">
-
-![AA Frequency All Groups](model_evaluation/figure9.png)
-
-*Extended 4-group comparison: FP vs all Negatives vs FN vs all Positives. This reveals which amino acid compositional differences are specific to misclassified sequences versus simply reflecting class-level differences between SPs and non-SPs.*
-
-</div>
-
----
-
-## 🔍 Error Analysis — Deep Learning (`model_evaluation_DL/`)
-
-The same systematic analysis is repeated for the SP-NN model, enabling direct comparison of error patterns between the SVM and the deep learning approach.
-
----
-
-### Transmembrane Domain & False Positives
-
-<div align="center">
-
-![HD Prediction DL 1](model_evaluation_DL/HD_prediction_1.png)
-
-*Percentage of sequences with/without a transmembrane helix across all prediction groups for SP-NN. The deep model also shows FP enrichment for TM proteins, but to a lesser degree than the SVM — the LSTM's sequential context helps distinguish some TM helices from true SPs.*
-
-</div>
-
-<div align="center">
-
-![HD Prediction DL 2](model_evaluation_DL/HD_prediction_2.png)
-
-*FP vs TN+FP helix domain comparison for SP-NN. Compared to the SVM, the gap between FP and TN+FP is smaller, indicating the DL model handles TM proteins better.*
-
-</div>
-
----
-
-### Kingdom-level False Positive Rate
-
-<div align="center">
-
-![FPR Kingdom DL](model_evaluation_DL/FPR_Kingdom.png)
-
-*Kingdom-level FPR for the SP-NN. Comparing this with the SVM equivalent reveals whether the deep model disproportionately improves on specific taxonomic groups (e.g. plant sequences with transit peptides).*
-
-</div>
-
----
-
-### Taxonomic Composition of Misclassifications
-
-<div align="center">
-
-![Taxonomy DL](model_evaluation_DL/Pieplot_species.png)
-
-*Taxonomic breakdown of Total Positives, False Negatives, and True Positives for the SP-NN. A more uniform FN composition compared to the SVM would indicate the DL model generalises better across kingdoms.*
-
-</div>
-
----
-
-### Signal Peptide Length Distribution
-
-<div align="center">
-
-![SP Length DL](model_evaluation_DL/Signalength_distribution.png)
-
-*SP length distribution for TP vs FN in the SP-NN. The DL model's FN distribution is narrower than the SVM's — the CNN kernel (size 17) is specifically tuned to the canonical SP hydrophobic core length, reducing length-related false negatives.*
-
-</div>
-
----
-
-### Hydrophobicity Analysis
-
-<div align="center">
-
-![Hydrophobicity DL](model_evaluation_DL/Hydrophobicity_SP.png)
-
-*Hydrophobicity distribution over the SP region for the SP-NN predictions. The DL model shows a cleaner separation between TP and FN hydrophobicity distributions compared to the SVM.*
-
-</div>
-
-<div align="center">
-
-![Hydrophobicity Boxplot DL](model_evaluation_DL/Boxplot_Hydrophobicity_SP.png)
-
-*Boxplot comparison of SP hydrophobicity for TP vs FN in the SP-NN. The reduced overlap relative to the SVM confirms that the deep model is more robust to low-hydrophobicity signal peptides.*
-
-</div>
-
-<div align="center">
-
-![Mean Hydrophobicity DL](model_evaluation_DL/Mean_hydrophobicity.png)
-
-*Mean hydrophobicity per prediction group for the SP-NN.*
-
-</div>
-
----
-
-### Amino Acid Frequency Analysis
-
-<div align="center">
-
-![AA Frequencies DL](model_evaluation_DL/AA_frequencies.png)
-
-*Amino acid frequency comparison (TP vs FN) for SP-NN predictions. Residues coloured by chemical class: 🔵 nonpolar (G,A,V,L,I,M,P) · 🟠 aromatic (F,Y,W) · 🟢 polar (S,T,N,Q,C) · 🔴 positive (K,R,H) · 🟣 negative (D,E).*
-
-</div>
-
-<div align="center">
-
-![AA Frequencies SP DL](model_evaluation_DL/AA_frequencies_SP.png)
-
-*AA frequencies restricted to the **SP sub-sequence only** for the SP-NN, isolating compositional signals within the cleavage region rather than the full protein.*
-
-</div>
-
-<div align="center">
-
-![AA Frequency Distribution DL](model_evaluation_DL/AA_frequency_Distribution.png)
-
-*4-group comparison for the SP-NN: FP vs Negatives vs FN vs Positives. Cross-referencing with the SVM equivalent (`figure9.png`) reveals which compositional biases are model-independent versus specific to one classifier.*
-
-</div>
-
----
-
-## 📈 Feature-wise Distributions (SVM)
-
-For the SVM, the 15 most informative features are visualised as KDE plots and boxplots comparing distributions across all four prediction groups (TP, TN, FP, FN). These plots identify exactly which biochemical properties drive misclassification.
-
----
-
-### Transmembrane Propensity
-
-<div align="center">
-
-![KDE TM Propensity](model_evaluation/KDE_TranmembranP.png)
-
-*Kernel Density Estimation of Max Transmembrane Propensity (custom TM scale). TP and FP sequences share a high-propensity peak — confirming TM helices mimic signal peptide hydrophobic cores. TN sequences cluster at low propensity. FN sequences occupy an intermediate zone.*
-
-</div>
-
-<div align="center">
-
-![Boxplot TM](model_evaluation/Boxplot_TRTE.png)
-
-*Boxplot version of transmembrane propensity across all four groups. The FP median is close to TP, confirming the TM-confusion hypothesis. The wider FP distribution reflects the structural diversity of TM proteins.*
-
-</div>
-
----
-
-### Chou-Fasman Propensities
-
-<div align="center">
-
-![Chou-Fasman Helix](model_evaluation/Boxplot_Chou_Fasman.png)
-
-*Mean Chou-Fasman **helix** propensity across groups. Signal peptides (TP) show higher helical tendency than non-SPs (TN), consistent with the amphipathic helix structure of the hydrophobic core. FN sequences have reduced helix propensity — atypically non-helical signal peptides.*
-
-</div>
-
-<div align="center">
-
-![Chou-Fasman Beta](model_evaluation/Chou_Fasman_BProp.png)
-
-*Max Chou-Fasman **β-sheet** propensity. FP sequences (TM proteins) show elevated β-sheet propensity compared to TP — TM helices have a distinct secondary structure signature that partially distinguishes them from true SPs.*
-
-</div>
-
----
-
-### Flexibility, Membrane Propensity & Bulkiness
-
-<div align="center">
-
-![Residue Flexibility](model_evaluation/Boxplot_ResidueFlex.png)
-
-*Max residue flexibility (Vihinen scale). FN sequences tend toward higher flexibility — a disordered, flexible N-terminus correlates with weaker signal peptide structure and increases misclassification risk.*
-
-</div>
-
-<div align="center">
-
-![Punta-Maritan](model_evaluation/Boxplot_PuntaMaritan.png)
-
-*Max membrane propensity (Punta-Maritan 2003 scale). FP sequences (TM proteins) show elevated membrane propensity compared to TP sequences, providing a discriminative signal the SVM can exploit to reduce the FPR on TM proteins.*
-
-</div>
-
-<div align="center">
-
-![Bulkiness](model_evaluation/boxplot_Bulkiness.png)
-
-*Mean residue bulkiness (Zimmerman 1968). TP sequences show slightly higher mean bulkiness than non-SPs — consistent with the preference for large hydrophobic residues (L, I, V, F) in signal peptide hydrophobic cores.*
-
-</div>
-
----
-
-### Hydrophobicity (Argos)
-
-<div align="center">
-
-![Argos Hydrophobicity](model_evaluation/Boxplot_ArgosMax.png)
-
-*Max residue hydrophobicity (Argos scale). This is one of the strongest individual discriminators: TP sequences have substantially higher Argos hydrophobicity than TN. FN sequences overlap with the lower end of the TP distribution, explaining why weak hydrophobic cores lead to missed detections.*
-
-</div>
-
----
-
-## 🔤 Sequence Logos
-
-Sequence logos (generated with **logomaker**) align all sequences around the cleavage site (positions −13 to +4) and visualise positional residue conservation as **information content** in bits.
-
----
-
-### SVM — `model_evaluation/`
-
-<div align="center">
-
-| True Positives | False Negatives |
-|:--------------:|:---------------:|
-| ![TP Logo SVM](model_evaluation/figure12A-1.png) | ![FN Logo SVM](model_evaluation/figure12A-2.png) |
-| **Strong AXA cleavage motif** at positions −3/−1 and a dominant hydrophobic core (L/A/V) from −10 to −4. This is the canonical signal peptide signature. | **Attenuated motif signal** — lower bit scores throughout. The hydrophobic core is weaker and the AXA motif less conserved. These are atypical SPs the model fails to detect. |
-
-| True Negatives | False Positives |
-|:--------------:|:---------------:|
-| ![TN Logo SVM](model_evaluation/figure12A-3.png) | ![FP Logo SVM](model_evaluation/figure12A-4.png) |
-| No structured motif — broad, unspecific residue distribution. Non-SP sequences lack both the hydrophobic core and the AXA cleavage signal. | Elevated hydrophobic signal at positions −10 to −4, mimicking the SP hydrophobic core. These are predominantly transmembrane proteins whose N-terminal TM helix confuses the classifier. |
-
-*Sequence logos for SVM — Information Content (bits). Cleavage site at position 0.*
-
-</div>
-
----
-
-### Deep Learning — `model_evaluation_DL/`
-
-<div align="center">
-
-| True Positives | False Negatives |
-|:--------------:|:---------------:|
-| ![TP Logo DL](model_evaluation_DL/figure12A-1.png) | ![FN Logo DL](model_evaluation_DL/figure12A-2.png) |
-| SP-NN TP logo shows the same canonical AXA motif and hydrophobic core, confirming the model has learned the correct biological signal. | DL FN sequences show a weaker but still partially structured motif — the SP-NN misses fewer edge cases than the SVM, as reflected in higher overall sensitivity. |
-
-| True Negatives | False Positives |
-|:--------------:|:---------------:|
-| ![TN Logo DL](model_evaluation_DL/figure12A-3.png) | ![FP Logo DL](model_evaluation_DL/figure12A-4.png) |
-| TN logo for SP-NN is similarly unstructured — the model correctly rejects sequences with no SP-like pattern. | DL FP sequences still show hydrophobic enrichment in the core region, but the peak is narrower than the SVM equivalent — the LSTM provides enough sequential context to reject more TM proteins. |
-
-*Sequence logos for SP-NN — Information Content (bits). Cleavage site at position 0.*
-
-</div>
+## 🔍 Error Analysis — SP-NN (`model_evaluation_DL/`)
+
+The same analyses are repeated for the deep learning model. Comparing SP-NN figures with the SVM equivalents reveals which error patterns are model-independent (a property of the data) vs model-specific.
+
+### Key comparisons
+
+| Analysis | What SP-NN does better |
+|----------|----------------------|
+| TM helix FP rate | Lower — the LSTM's sequential context helps distinguish some TM helices from true SPs |
+| SP length distribution | Narrower FN spread — CNN kernel tuned to the 17-aa canonical SP length handles atypical lengths better |
+| Hydrophobicity separation | Cleaner — DL model more robust to low-hydrophobicity SPs |
+| Sequence logos | Same canonical AXA motif is learned (TP logo), but FN logo shows slightly stronger residual motif than SVM |
+
+### SP-NN figure map
+
+| Figure | Description |
+|--------|-------------|
+| `model_evaluation_DL/HD_prediction_1.png` | TM helix prevalence by prediction group |
+| `model_evaluation_DL/HD_prediction_2.png` | FP vs TN+FP helix domain comparison |
+| `model_evaluation_DL/FPR_Kingdom.png` | Kingdom-level FPR for SP-NN |
+| `model_evaluation_DL/Pieplot_species.png` | Taxonomic composition of misclassifications |
+| `model_evaluation_DL/Signalength_distribution.png` | SP length distribution — TP vs FN |
+| `model_evaluation_DL/Hydrophobicity_SP.png` | Hydrophobicity histogram — TP vs FN |
+| `model_evaluation_DL/Boxplot_Hydrophobicity_SP.png` | Hydrophobicity boxplot |
+| `model_evaluation_DL/Mean_hydrophobicity.png` | Mean hydrophobicity per group |
+| `model_evaluation_DL/AA_frequencies.png` | Full-sequence AA frequency — TP vs FN |
+| `model_evaluation_DL/AA_frequencies_SP.png` | SP-region AA frequency — TP vs FN |
+| `model_evaluation_DL/AA_frequency_Distribution.png` | 4-group AA frequency comparison |
+| `model_evaluation_DL/figure12A-1.png` to `_4.png` | Sequence logos for TP, FN, TN, FP |
 
 ---
 
 ## 📌 Conclusion
 
-<div align="center">
-
 | | Von Heijne | SVM | SP-NN |
-|:---|:---:|:---:|:---:|
+|:--|:---:|:---:|:---:|
 | **MCC** | 0.688 | 0.808 | **0.902** |
-| Feature engineering | Manual (PSWM) | Manual (18 descriptors) | **None** |
+| Feature engineering | Manual (PSWM) | Manual (15 descriptors) | None |
 | Training required | ✗ | ✓ | ✓ |
-| Sequence representation | Cleavage window | Full protein | N-terminus (90 aa) |
-| Architecture | Rule-based | Kernel machine | CNN + LSTM + MLP |
+| Sequence representation | 15-residue cleavage window | Full protein (15 features) | N-terminus (90 aa, raw) |
+| Architecture | Rule-based | RBF kernel machine | CNN + LSTM + MLP |
 
-</div>
+The error analyses across all three models consistently point to two root causes of misclassification that are **model-independent** (present in all three):
 
-Each step up in model complexity yields a meaningful, consistent gain. The **MCC of 0.902** for SP-NN confirms that a CNN+LSTM architecture can learn both local hydrophobic motifs and sequential N-terminal context directly from raw sequences — outperforming both handcrafted rules and classical ML without any domain-expert feature engineering.
+1. **False Positives:** Transmembrane domain proteins whose N-terminal hydrophobic helix mimics a signal peptide hydrophobic core
+2. **False Negatives:** Atypically polar, short, or compositionally unusual signal peptides that deviate from the canonical AXA / hydrophobic-core template
 
-Error analysis consistently identifies **transmembrane-domain proteins** as the primary source of false positives across both models, and **atypically polar or short signal peptides** as the main source of false negatives — providing a concrete roadmap for future model improvements.
+Both are genuine biological challenges, not model defects. Addressing them would require either richer training data (more diverse atypical SPs) or explicit transmembrane-helix discriminators in the feature set.
 
 ---
 
-<div align="center">
-<sub>Built with PyTorch · scikit-learn · Ray Tune · Biopython · logomaker</sub>
-</div>
+## 🔁 How to Run
+
+Run in this order:
+
+```
+1. hyperparameter_tuning.ipynb
+   └── Outputs: SignalPeptideSVM.pkl, benchmark_features.npz
+       ↓
+2. benchmark_test.ipynb
+   └── Outputs: SignalPeptideLSTM.pt, model_evaluation_DL/ figures
+       ↓
+3. model_evaluation_and_plots.ipynb
+   └── Outputs: model_evaluation/ figures
+```
+
+> ⚠️ `benchmark_test.ipynb` and `model_evaluation_and_plots.ipynb` both require `../2.Data_Preparation/train_bench.tsv`.  
+> ⚠️ `model_evaluation_and_plots.ipynb` requires `SignalPeptideSVM.pkl` and `benchmark_features.npz` (produced by `hyperparameter_tuning.ipynb`).
+
+---
+
+## 📦 Required Libraries
+
+```python
+torch                # SP-NN inference and TorchScript
+ray[tune]            # Hyperparameter search
+scikit-learn         # SVM, metrics, preprocessing
+scikit-optimize      # BayesSearchCV
+biopython            # Physicochemical scales
+matplotlib, seaborn  # All plots
+logomaker            # Sequence logos
+numpy, pandas        # Numerical and tabular data
+importnb             # Import .ipynb as modules
+```
