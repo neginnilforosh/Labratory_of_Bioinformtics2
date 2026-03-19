@@ -394,7 +394,33 @@ Final cross-validation performance = mean ± standard error across 5 test folds.
 
 The 20% holdout set is used **once**, at the very end, to report unbiased final performance. It is never touched during training, cross-validation, or hyperparameter tuning.
 
+## Conclusion
 
+This project systematically compared three generations of signal peptide prediction methods using a high-quality, non-redundant dataset derived from UniProtKB/Swiss-Prot (2025 release):
+
+- **Von Heijne (1986)** rule-based approach using a position-specific weight matrix (PSWM)  
+- **SVM** classifier with carefully engineered and selected biochemical + sequence features  
+- **SP-NN** — a modern hybrid CNN+LSTM deep learning model operating directly on one-hot encoded sequences
+
+**Key quantitative findings** (independent benchmark set):
+
+| Method              | MCC    | Precision | Sensitivity | Notes                              |
+|---------------------|--------|-----------|-------------|------------------------------------|
+| Von Heijne (PSWM)   | 0.688  | 0.934     | 0.711       | Strong baseline, high precision    |
+| SVM (15 features)   | 0.808  | ~0.92     | ~0.93       | Clear improvement via features     |
+| SP-NN (CNN+LSTM)    | **0.902** | ~0.97  | ~0.97       | Best overall performance           |
+
+The deep learning model achieved the highest Matthews Correlation Coefficient (**+0.21** over the classical method, **+0.094** over the feature-based SVM), confirming that modern sequence modeling architectures capture patterns that are difficult to hand-craft.
+
+**Main biological lessons learned from error analysis:**
+
+- The dominant source of **false positives** in all models remains **N-terminal transmembrane helices**, whose hydrophobic character strongly resembles the signal peptide h-region.
+- **False negatives** are most frequent among atypically short (<15 aa) or unusually long (>35 aa) signal peptides, and among sequences with reduced hydrophobicity or atypical amino acid composition in the core region.
+- Plant chloroplast transit peptides and fungal signal peptides cause only minor performance degradation, suggesting good generalization across eukaryotic kingdoms.
+
+Taken together, the results demonstrate clear progress in signal peptide prediction accuracy over the past four decades — from simple position-specific scoring matrices, through kernel methods with domain knowledge, to end-to-end deep learning. Nevertheless, transmembrane helix confusion remains a fundamental limitation shared by all current approaches.
+
+This work provides a reproducible pipeline, well-documented feature extraction code, a trained TorchScript model, and detailed biological interpretation of errors — resources that can serve as a foundation for future improvements in secretory pathway prediction, protein localization annotation, and synthetic biology applications.
 
 ## 📁 Repository Structure (TO BE DELETED)
 
@@ -451,23 +477,4 @@ The 20% holdout set is used **once**, at the very end, to report unbiased final 
     └── model_evaluation_DL/          ← SP-NN error analysis figures
 ```
 
----
-
-## 🔑 Key Concepts Explained Simply(TO BE DELETED)
-
-**Signal Peptide (SP):** A short N-terminal sequence (~20 aa) that routes proteins into the secretory pathway. Has three parts: a positive-charge region, a hydrophobic core, and an AXA cleavage motif.
-
-**PSWM (Position-Specific Weight Matrix):** A matrix of log-odds scores recording how much more (or less) likely each amino acid is at each position of the cleavage site, compared to random. The basis of the Von Heijne method.
-
-**SVM (Support Vector Machine):** A classifier that finds the hyperplane in feature space with the largest margin between positive and negative examples. The RBF kernel allows non-linear decision boundaries.
-
-**CNN (Convolutional Neural Network):** Slides a learned filter (kernel) along the sequence to detect local patterns — like the hydrophobic core — regardless of their exact starting position.
-
-**LSTM (Long Short-Term Memory):** A recurrent network that reads the sequence position by position, maintaining a "memory" of what it has seen so far. Captures long-range dependencies across the N-terminus.
-
-**MCC (Matthews Correlation Coefficient):** The gold-standard metric for imbalanced binary classification. Ranges from −1 to +1; 0 = random guessing. Recommended over accuracy or F1 when classes are unequal.
-
-**Data leakage:** When information from the test set accidentally influences the training process (e.g. similar sequences on both sides of a train/test split), making the model appear better than it truly is. Prevented here by clustering sequences before splitting.
-
-**TorchScript:** A way to save a PyTorch model as a standalone file containing both the architecture and the weights. Can be loaded without the original Python class definition.
 
