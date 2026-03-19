@@ -215,38 +215,4 @@ The error analyses across all three models consistently point to two root causes
 
 Both are genuine biological challenges, not model defects. Addressing them would require either richer training data (more diverse atypical SPs) or explicit transmembrane-helix discriminators in the feature set.
 
----
 
-## 🔁 How to Run
-
-Run in this order:
-
-```
-1. hyperparameter_tuning.ipynb
-   └── Outputs: SignalPeptideSVM.pkl, benchmark_features.npz
-       ↓
-2. benchmark_test.ipynb
-   └── Outputs: SignalPeptideLSTM.pt, model_evaluation_DL/ figures
-       ↓
-3. model_evaluation_and_plots.ipynb
-   └── Outputs: model_evaluation/ figures
-```
-
-> ⚠️ `benchmark_test.ipynb` and `model_evaluation_and_plots.ipynb` both require `../2.Data_Preparation/train_bench.tsv`.  
-> ⚠️ `model_evaluation_and_plots.ipynb` requires `SignalPeptideSVM.pkl` and `benchmark_features.npz` (produced by `hyperparameter_tuning.ipynb`).
-
----
-
-## 📦 Required Libraries
-
-```python
-torch                # SP-NN inference and TorchScript
-ray[tune]            # Hyperparameter search
-scikit-learn         # SVM, metrics, preprocessing
-scikit-optimize      # BayesSearchCV
-biopython            # Physicochemical scales
-matplotlib, seaborn  # All plots
-logomaker            # Sequence logos
-numpy, pandas        # Numerical and tabular data
-importnb             # Import .ipynb as modules
-```
