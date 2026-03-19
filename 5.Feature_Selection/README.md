@@ -284,13 +284,3 @@ The consistently high MCC values across all 5 folds confirm good generalisation 
 | 13 | **Mean bulkiness** | Large hydrophobic side chains (L, I, V) dominate SP cores |
 | 14 | **M (Met) frequency** | Met enriched in SP cores (and at initiator Met position) |
 | 15 | **Max Argos hydrophobicity** | Peak hydrophobicity — strong SP predictor |
-
----
-
-## 🔁 How to Run
-
-1. Ensure `../2.Data_Preparation/train_bench.tsv` exists
-2. Run `custom_features.ipynb` first — defines all feature extraction functions
-3. Run `feauture_selection.ipynb` — generates the `.npz` feature files and trains the SVM
-
-> The `.npz` files generated here are used directly by `../7.Model_performances/hyperparameter_tuning.ipynb`.
