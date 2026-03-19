@@ -163,24 +163,4 @@ logo_matrix = lm.alignment_to_matrix(sequences=train_seqs,
 - Hydrophobic residues (L, A, V, I) dominating positions −10 to −4 (the hydrophobic H-region of the SP)
 - A drop in conservation immediately after the cleavage site
 
----
 
-## 📦 Required Libraries
-
-```python
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-import logomaker as lm   # pip install logomaker
-```
-
----
-
-## 🔁 How to Run
-
-1. Make sure `../2.Data_Preparation/train_bench.tsv` exists (run Step 2 first)
-2. Open and run all cells in `plots.ipynb`
-3. Output figures are saved automatically into the subfolders listed above
-
-> All figures are saved at 300 DPI suitable for publication or reports.
