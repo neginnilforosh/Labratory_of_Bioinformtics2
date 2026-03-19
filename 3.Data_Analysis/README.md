@@ -1,117 +1,186 @@
-# Data Analysis of Signal Peptides
+# 📊 Step 3 — Data Analysis
 
-## Introduction
-
-Signal peptides (SPs) are short N-terminal regions that direct newly synthesized proteins toward the secretory pathway. After targeting, these peptides are usually removed by signal peptidases. Because of their biological role, they represent an important signal for distinguishing secreted proteins from proteins that remain in other cellular compartments.
-
-In this project, the data analysis step was carried out to examine the properties of proteins with and without signal peptides before applying predictive methods. The aim was to verify that the dataset was biologically meaningful, to compare the positive and negative classes, and to identify the sequence patterns that could later support approaches such as the **von Heijne method** and **SVM-based classification**.
+> **What this folder does:** Explores the dataset visually before any modelling begins — checking protein lengths, signal peptide properties, amino acid composition, taxonomic diversity, and sequence patterns around cleavage sites. This step confirms the data is biologically sensible and ready for downstream models.
 
 ---
 
-## Workflow Overview
+## 🗂️ Files in this Folder
 
-The analysis was performed on the processed dataset generated after the data collection and preprocessing steps. In particular, the input file used in this stage was:
+| File | What it does |
+|------|-------------|
+| `plots.ipynb` | All analyses and figure generation |
 
-- `../2.Data_Preparation/train_bench.tsv`
+### Output figure folders (created when notebook is run)
 
-This file contains proteins divided into:
-
-- five subsets for training and validation
-- one independent benchmark set
-
-The data analysis focused on the following aspects:
-
-- **protein sequence length distribution**
-- **signal peptide length distribution**
-- **amino acid composition**
-- **taxonomic classification**
-- **cleavage-site motif visualization**
-
-The analyses and figures were generated in:
-
-- `plots.ipynb`
+| Folder | Contents |
+|--------|----------|
+| `Sequence_lengths_comparison/` | Protein length and SP length distribution plots |
+| `3.AA_Comparison/` | Amino acid frequency comparisons |
+| `4.Taxonomy_classification/` | Pie charts and bar plots of kingdom/species composition |
+| `5.SequenceLogo/` | Sequence logos around the cleavage site |
 
 ---
 
-### 1. Protein Length Distribution
+## 📥 Input
 
-**Goal:** Compare the distribution of full protein lengths between proteins with signal peptides and proteins without signal peptides.
+All analyses read from one file:
 
-**Method:** Sequence lengths were extracted from the processed dataset and compared between positive and negative classes in both the **training** and **benchmark** sets. Since a few very long proteins can dominate the scale, filtered distribution plots were used to make the main patterns easier to interpret.
-
-#### Training set
-![Protein length - Training](./1,2.Sequence_lengths_comparison/Distribution_plot_training_distribution.png)
-
-#### Benchmark set
-![Protein length - Benchmark](./1,2.Sequence_lengths_comparison/Distribution_plot_benchmark.png)
-
-**Interpretation:**  
-The distributions show that the two classes do not have identical length profiles. Negative proteins cover a wider range of sequence lengths and include more long proteins, whereas positive proteins tend to be somewhat more compact. The benchmark set follows the same general trend observed in the training data, indicating that the split remains consistent and suitable for model evaluation.
+```
+../2.Data_Preparation/train_bench.tsv
+```
 
 ---
 
-### 2. Signal Peptide Length Distribution
+## 🔬 Analysis 1 — Protein Sequence Length Distribution
 
-**Goal:** Examine the variability of signal peptide lengths in the positive dataset.
+**Question:** Are positive (SP) and negative (non-SP) proteins the same length, or systematically different?
 
-**Method:** For proteins in the positive class, the signal peptide end position (`SPEnd`) was used to estimate signal peptide length. These lengths were then compared between the training and benchmark sets.
+**How it works:** The `SequenceLength` column is extracted and plotted separately for the training set and the benchmark set. To avoid a few very long proteins distorting the scale, the plots focus on sequences ≤2,500 amino acids (outliers are shown separately).
 
-![Signal peptide length - Training vs Benchmark](./1,2.Sequence_lengths_comparison/sp_length_train_vs_bench.png)
+**Figures generated:**
 
-**Interpretation:**  
-Most signal peptides fall within the expected biological range, with the majority concentrated around 20–25 amino acids. This agrees with the known structure of signal peptides and supports the reliability of the annotations used in the dataset. The similarity between training and benchmark sets also suggests that the positive class is consistently represented across the split.
+| Figure | Description |
+|--------|-------------|
+| `Sequence_lengths_comparison/Distribution_plot_training_distribution.png` | Density histogram of protein lengths — Training set, Positive vs Negative |
+| `Sequence_lengths_comparison/Distribution_plot_benchmark.png` | Same comparison for the Benchmark set |
+| `Sequence_lengths_comparison/Violin_plot_set_division.png` | Violin plot showing length distribution across all 5 folds + benchmark |
 
----
-
-### 3. Amino Acid Composition
-
-**Goal:** Identify compositional biases in signal peptide regions compared with a general protein background.
-
-**Method:** Amino acid frequencies were computed from signal peptide sequences and compared with Swiss-Prot reference frequencies. This analysis was used to determine whether the dataset reproduced the expected residue preferences of signal peptides.
-
-![Amino acid composition compared with Swiss-Prot](./3.AA_Comparison/frequencies_sp_train_vs_swissprot.png)
-
-**Interpretation:**  
-The composition profile shows a clear enrichment in hydrophobic residues, which is one of the most characteristic properties of signal peptides. This result is biologically expected, since signal peptides must interact with membrane-associated translocation machinery. The observed enrichment confirms that residue composition is likely to be informative for downstream prediction methods.
+**What to look for:** Negative proteins tend to have a wider length range and more very long sequences. Positive proteins (secreted) tend to be more compact. The training and benchmark sets should follow the same pattern — confirming the split is representative.
 
 ---
 
-### 4. Taxonomic Classification
+## 🔬 Analysis 2 — Signal Peptide Length Distribution
 
-**Goal:** Assess whether the dataset remains biologically representative after preprocessing and splitting.
+**Question:** How long are the signal peptides in the dataset? Are the training and benchmark sets consistent?
 
-**Method:** Proteins were grouped according to their kingdom labels and their distribution was visualized for the training and benchmark sets.
+**How it works:** Only positive-class proteins (those with a signal peptide) are used. The `SPEnd` column gives the cleavage site position, which serves as a proxy for SP length. KDE curves and histogram plots are generated for training vs. benchmark.
 
-![Kingdom distribution - Training](./4.Taxonomy_classification/kingdom_barplot_train.png)
+**Figures generated:**
 
-**Interpretation:**  
-The dataset is largely composed of eukaryotic groups, especially **Metazoa**, with additional representation from **Fungi**, **Viridiplantae**, and other eukaryotic categories. This matches the original data collection strategy. The taxonomic composition observed after preprocessing indicates that the dataset remains biologically coherent and that the benchmark set broadly reflects the same structure as the training data.
+| Figure | Description |
+|--------|-------------|
+| `Sequence_lengths_comparison/sp_length_train_vs_bench.png` | SP length probability distribution — Training vs Benchmark |
+| `Sequence_lengths_comparison/Distribution_plot_SPE_distribution.png` | KDE of SP lengths across all 6 sets (Folds 1–5 + Benchmark) |
 
----
-
-### 5. Cleavage Site Sequence Logos
-
-**Goal:** Visualize residue conservation around signal peptide cleavage sites.
-
-**Method:** Sequence windows surrounding the annotated cleavage sites were aligned and represented as sequence logos. These logos summarize position-specific residue preferences in the region most directly involved in signal peptide processing.
-
-![Cleavage site sequence logo](./5.SequenceLogo/sequence_logo_training.png)
-
-**Interpretation:**  
-The sequence logo shows conserved residue preferences around the cleavage site, especially the presence of small and neutral residues close to the cleavage position. This agrees with the known biological rules governing signal peptide cleavage and provides further evidence that the positive dataset is coherent and suitable for later modeling.
+**What to look for:** Signal peptides should cluster between 15 and 30 amino acids. Both training and benchmark distributions should overlap closely, confirming that the 80/20 split does not bias the SP length profile.
 
 ---
 
-## Conclusion
+## 🔬 Analysis 3 — Amino Acid Composition
 
-This analysis provided a descriptive overview of the dataset used for signal peptide prediction. The results show that the processed data are biologically plausible and consistent with the known properties of signal peptides. In particular:
+**Question:** Do signal peptides have a distinctive amino acid composition compared with typical proteins?
 
-- the sequence length distributions remain comparable between training and benchmark sets
-- signal peptide lengths fall within the expected biological range
-- amino acid composition reflects the strong hydrophobic character of signal peptides
-- taxonomic composition remains coherent after preprocessing
-- cleavage-site motifs show recognizable conserved patterns
+**How it works:**
+1. For each positive protein, the subsequence from `SPStart` to `SPEnd` is extracted (the actual signal peptide)
+2. The frequency of all 20 amino acids is computed across all signal peptides
+3. These frequencies are compared to SwissProt background frequencies (the typical composition of all reviewed proteins)
 
-Together, these results confirm that the dataset is suitable for the next stages of the project, including feature extraction, the application of von Heijne-based rules, and machine-learning classification.
+**SwissProt background frequencies used:**
 
+| AA | Freq | AA | Freq | AA | Freq | AA | Freq |
+|----|------|----|------|----|------|----|------|
+| A (Ala) | 8.25% | G (Gly) | 7.07% | L (Leu) | 9.64% | S (Ser) | 6.65% |
+| R (Arg) | 5.52% | H (His) | 2.27% | K (Lys) | 5.79% | T (Thr) | 5.36% |
+| N (Asn) | 4.06% | I (Ile) | 5.90% | M (Met) | 2.41% | W (Trp) | 1.10% |
+| D (Asp) | 5.46% | — | — | F (Phe) | 3.86% | Y (Tyr) | 2.92% |
+| C (Cys) | 1.38% | — | — | P (Pro) | 4.74% | V (Val) | 6.85% |
 
+Amino acids are grouped by chemical class on the x-axis (colour-coded):
+
+| Colour | Class | Residues |
+|--------|-------|---------|
+| 🔵 Blue | Nonpolar aliphatic | G, A, V, L, I, M, P |
+| 🟠 Orange | Aromatic | F, Y, W |
+| 🟢 Green | Polar uncharged | S, T, C, N, Q |
+| 🔴 Red | Charged | D, E, K, R |
+
+**Figures generated:**
+
+| Figure | Description |
+|--------|-------------|
+| `3.AA_Comparison/frequencies_sp_train_vs_swissprot.png` | SP amino acid frequencies (training) vs SwissProt background |
+| `Sequence_lengths_comparison/frequencies_sp_bench_vs_swissprot_aacategories.png` | Same comparison grouped by chemical class |
+| `Sequence_lengths_comparison/AminoAcid_Frequencies_Set.png` | AA frequencies across all 5 training folds |
+
+**What to look for:** Signal peptides are expected to be strongly enriched in hydrophobic residues (especially L, A, V, I) compared to the SwissProt background. This hydrophobic enrichment is what allows the signal peptide to interact with the membrane translocon machinery. Seeing this clearly confirms the biological relevance of the dataset.
+
+---
+
+## 🔬 Analysis 4 — Taxonomic Classification
+
+**Question:** Which organisms are represented in the dataset? Is the taxonomic composition consistent between training and benchmark sets?
+
+**How it works:** Proteins are grouped by `Kingdom` and `OrganismName`. Because there are hundreds of species, only the **6 most frequent organisms** are kept as individual labels; all others are grouped as "Other". Pie charts and bar plots are generated for both training and benchmark subsets.
+
+**Figures generated:**
+
+| Figure | Description |
+|--------|-------------|
+| `4.Taxonomy_classification/kingdom_barplot_train.png` | Bar plot of kingdom distribution — Training set |
+| `4.Taxonomy_classification/kingdom_barplot_bench.png` | Bar plot of kingdom distribution — Benchmark set |
+| `4.Taxonomy_classification/kingdom_pie_train.png` | Pie chart of kingdom fractions — Training set |
+| `4.Taxonomy_classification/species_barplot_train.png` | Bar plot of top 6 species + Other — Training |
+| `4.Taxonomy_classification/species_pie_bench.png` | Pie chart of species — Benchmark |
+
+**What to look for:** The dataset should be dominated by **Metazoa** (animals), with smaller contributions from **Fungi**, **Viridiplantae** (plants), and other eukaryotic groups. The training and benchmark sets should show similar proportions — if one set has dramatically different species composition, the benchmark would not be a fair test.
+
+---
+
+## 🔬 Analysis 5 — Cleavage Site Sequence Logos
+
+**Question:** Are there conserved sequence patterns around signal peptide cleavage sites?
+
+**How it works:**
+1. For each positive protein, the subsequence from **position SPEnd−13 to SPEnd+2** is extracted — a 15-residue window centred just before the cleavage site
+2. All such subsequences are aligned and fed to **logomaker** to build a sequence logo
+3. The logo is computed using **information content** (measured in bits): positions where one amino acid is strongly preferred show tall stacks; positions with uniform distribution show flat, short stacks
+
+```python
+# Extract 15-residue window around cleavage site
+for index, row in train_pos.iterrows():
+    sequence  = row["Sequence"]
+    cleavage  = int(row["SPEnd"])
+    window    = sequence[cleavage - 13 : cleavage + 2]  # -13 to +2
+    train_seqs.append(window)
+
+# Build information-content logo
+logo_matrix = lm.alignment_to_matrix(sequences=train_seqs,
+                                      to_type='information',
+                                      characters_to_ignore='.-X')
+```
+
+**Figures generated:**
+
+| Figure | Description |
+|--------|-------------|
+| `5.SequenceLogo/sequence_logo_training.png` | Sequence logo from training set sequences |
+| `5.SequenceLogo/sequence_logo_benchmark.png` | Sequence logo from benchmark sequences |
+| `5.SequenceLogo/sequence_logo_benchmark_colored.png` | Coloured version of the benchmark logo |
+| `5.SequenceLogo/mirrored_logo_fixed.png` | Mirror-style logo for extended visualisation |
+
+**What to look for:** The canonical signal peptide cleavage motif is the **AXA rule** — small, neutral amino acids (especially Ala) at positions −3 and −1 relative to the cleavage site. The logo should show:
+- High information content at positions −3 and −1 (Ala preferred)
+- Hydrophobic residues (L, A, V, I) dominating positions −10 to −4 (the hydrophobic H-region of the SP)
+- A drop in conservation immediately after the cleavage site
+
+---
+
+## 📦 Required Libraries
+
+```python
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import logomaker as lm   # pip install logomaker
+```
+
+---
+
+## 🔁 How to Run
+
+1. Make sure `../2.Data_Preparation/train_bench.tsv` exists (run Step 2 first)
+2. Open and run all cells in `plots.ipynb`
+3. Output figures are saved automatically into the subfolders listed above
+
+> All figures are saved at 300 DPI suitable for publication or reports.
