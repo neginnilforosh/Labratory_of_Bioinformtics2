@@ -1,15 +1,10 @@
-<div align="center">
+
 
 # 🧬 Signal Peptide Prediction
 ### A Comparative Study: Von Heijne · SVM · Deep Learning
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.2%2B-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
 
 *From handcrafted rules to end-to-end deep learning — a rigorous benchmark on protein signal peptide classification*
-
-</div>
 
 ---
 
@@ -561,58 +556,6 @@ Sequence logos (generated with **logomaker**) align all sequences around the cle
 *Sequence logos for SP-NN — Information Content (bits). Cleavage site at position 0.*
 
 </div>
-
----
-
-## 🚀 Running the Code
-
-Run notebooks in this exact order:
-
-```
-1. lstm.ipynb
-   └── Defines SP_NN architecture, utility functions, runs Ray Tune (15 trials × 5-fold CV)
-       Prints best config at the end → hardcode into benchmark_test.ipynb
-           ↓
-2. hyperparameter_tuning.ipynb
-   └── Trains SVM with BayesSearchCV (60 iter)
-       Saves: SignalPeptideSVM.pkl  +  benchmark_features.npz
-           ↓
-3. benchmark_test.ipynb
-   └── Retrains SP-NN on folds 1–4, validates on fold 5, evaluates on benchmark
-       Saves: SignalPeptideLSTM.pt
-       Generates: model_evaluation_DL/ (all DL plots)
-           ↓
-4. model_evaluation_and_plots.ipynb
-   └── Loads SVM + Von Heijne, evaluates on benchmark
-       Generates: model_evaluation/ (all SVM + Von Heijne plots)
-```
-
-### Prerequisites
-
-```bash
-pip install torch scikit-learn scikit-optimize biopython \
-            matplotlib seaborn logomaker numpy pandas \
-            "ray[tune]" importnb
-```
-
-> 💡 **No GPU?** In `lstm.ipynb`, change `resources_per_trial={"cpu": 4, "gpu": 0}`.  
-> ⚠️ **SVM feature shape:** Ensure `training` in `hyperparameter_tuning.ipynb` contains only Sets 2–5 (not Set 1) to match `x_training_conc`.
-
----
-
-## 📦 Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `torch >= 2.0` | SP-NN training and TorchScript export |
-| `ray[tune] >= 2.0` | Distributed hyperparameter search |
-| `scikit-learn >= 1.2` | SVM, metrics, preprocessing |
-| `scikit-optimize` | `BayesSearchCV` for SVM tuning |
-| `biopython` | `ProteinAnalysis`, `ProtParamData` scales |
-| `matplotlib / seaborn` | All visualisations |
-| `logomaker` | Sequence logo generation |
-| `numpy / pandas` | Numerical and tabular data |
-| `importnb` | Import `.ipynb` as Python modules |
 
 ---
 
