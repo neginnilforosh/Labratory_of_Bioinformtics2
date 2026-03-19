@@ -163,14 +163,3 @@ All data — training folds and benchmark — is merged into a single file. This
 | Benchmark | 1,787 | 219 | 2,006 |
 | **Total** | **8,934** | **1,093** | **10,027** |
 
----
-
-## 🔁 How to Run
-
-Run the notebooks in this order:
-
-1. **`recover_ids_clusters.ipynb`** — must be run after MMseqs2 has already been executed on the FASTA files (MMseqs2 is a command-line tool run outside Jupyter)
-2. **`prepare_datasets.ipynb`** — creates `train_bench.tsv`
-3. **`output_recap.ipynb`** — verifies the final counts
-
-> ⚠️ Do **not** re-run the randomisation cell (`pos_id.sample(frac=1)`) after the initial run. The split must remain fixed for all downstream experiments to be comparable. The cell is marked with a `# DO NOT RERUN THIS CELL` comment.
