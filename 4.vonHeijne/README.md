@@ -169,12 +169,4 @@ The high precision but lower sensitivity pattern is expected for the Von Heijne 
 | Biologically meaningful scoring | Does not use global sequence context |
 | Fast — a single matrix-vector multiplication per window | Sensitive to unusual SP compositions |
 
----
 
-## 🔁 How to Run
-
-1. Open `create_pswm.ipynb` — builds and visualises the PSWM heatmap
-2. Open `validation_and_testing_vonheijne.ipynb` — runs the full 5-fold evaluation
-3. Alternatively, run `vonheijne.ipynb` which combines both steps end-to-end
-
-> Requires `../2.Data_Preparation/train_bench.tsv` to exist.
