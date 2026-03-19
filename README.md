@@ -2,21 +2,9 @@
 
 # 🧬 Signal Peptide Prediction
 ## Laboratory of Bioinformatics II — Module 2
-### International Master in Bioinformatics · University of Bologna · A.Y. 2025–2026
-
-[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://python.org)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.2%2B-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
-[![UniProt](https://img.shields.io/badge/Data-UniProtKB%202025__03-005b96)](https://www.uniprot.org)
-
-*A complete end-to-end machine learning pipeline for signal peptide detection —  
-from raw database retrieval to deep learning, with rigorous biological error analysis.*
-
-**Supervisor:** Prof. Castrense Savojardo · Biocomputing Group, Dept. of Pharmacy and Biotechnology
 
 </div>
 
----
 
 ## 🗺️ Quick Navigation
 
@@ -406,64 +394,9 @@ Final cross-validation performance = mean ± standard error across 5 test folds.
 
 The 20% holdout set is used **once**, at the very end, to report unbiased final performance. It is never touched during training, cross-validation, or hyperparameter tuning.
 
----
 
-## 🚀 Getting Started
 
-### Prerequisites
-
-```bash
-# Core scientific stack
-pip install numpy pandas scikit-learn scikit-optimize biopython
-
-# Deep learning
-pip install torch "ray[tune]"
-
-# Visualisation
-pip install matplotlib seaborn logomaker
-
-# Notebook utilities
-pip install importnb import-ipynb
-```
-
-### Run order
-
-```
-Step 1  → 1.Data_Collection/get_dataset_pos.ipynb
-           1.Data_Collection/get_dataset_neg.ipynb
-
-Step 2  → 2.Data_Preparation/recover_ids_clusters.ipynb
-           2.Data_Preparation/prepare_datasets.ipynb
-                ↓ produces: train_bench.tsv
-
-Step 3  → 3.Data_Analysis/plots.ipynb
-                ↓ produces: all exploratory figures
-
-Step 4  → 4.vonHeijne/vonheijne.ipynb (full pipeline)
-         OR: create_pswm.ipynb + validation_and_testing_vonheijne.ipynb
-
-Step 5  → 5.Feature_Selection/custom_features.ipynb
-           5.Feature_Selection/feauture_selection.ipynb
-                ↓ produces: *_features_*.npz files
-
-Step 6  → 6.Deep_Learning/lstm.ipynb           (HPO — optional)
-           6.Deep_Learning/benchmark_test.ipynb (final training)
-                ↓ produces: SignalPeptideLSTM.pt
-
-Step 7  → 7.Model_performances/hyperparameter_tuning.ipynb
-                ↓ produces: SignalPeptideSVM.pkl, benchmark_features.npz
-           7.Model_performances/benchmark_test.ipynb
-                ↓ produces: model_evaluation_DL/ figures
-           7.Model_performances/model_evaluation_and_plots.ipynb
-                ↓ produces: model_evaluation/ figures
-```
-
-> ⚠️ Steps 1–2 require an internet connection (UniProt API). Step 2 also requires **MMseqs2** installed as a command-line tool.  
-> 💡 No GPU? In `lstm.ipynb` and `benchmark_test.ipynb`, set `resources_per_trial={"cpu": 4, "gpu": 0}`.
-
----
-
-## 📁 Repository Structure
+## 📁 Repository Structure (TO BE DELETED)
 
 ```
 .
@@ -520,7 +453,7 @@ Step 7  → 7.Model_performances/hyperparameter_tuning.ipynb
 
 ---
 
-## 🔑 Key Concepts Explained Simply
+## 🔑 Key Concepts Explained Simply(TO BE DELETED)
 
 **Signal Peptide (SP):** A short N-terminal sequence (~20 aa) that routes proteins into the secretory pathway. Has three parts: a positive-charge region, a hydrophobic core, and an AXA cleavage motif.
 
@@ -538,27 +471,3 @@ Step 7  → 7.Model_performances/hyperparameter_tuning.ipynb
 
 **TorchScript:** A way to save a PyTorch model as a standalone file containing both the architecture and the weights. Can be loaded without the original Python class definition.
 
----
-
-## 📜 References
-
-| Method | Reference |
-|--------|-----------|
-| Von Heijne algorithm | Von Heijne, G. (1986). *A new method for predicting signal sequence cleavage sites.* Nucleic Acids Research, 14(11), 4683–4690 |
-| MMseqs2 clustering | Steinegger, M. & Söding, J. (2017). *MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets.* Nature Biotechnology, 35, 1026–1028 |
-| SVM | Cortes, C. & Vapnik, V. (1995). *Support-vector networks.* Machine Learning, 20, 273–297 |
-| Bayesian optimisation | Snoek, J. et al. (2012). *Practical Bayesian Optimization of Machine Learning Algorithms.* NeurIPS |
-| Chou-Fasman propensities | Chou, P.Y. & Fasman, G.D. (1978). *Prediction of the secondary structure of proteins from their amino acid sequence.* Advances in Enzymology |
-| Punta membrane scale | Punta, M. & Maritan, A. (2003). *A knowledge-based scale for amino acid membrane propensity.* Proteins |
-| UniProtKB | The UniProt Consortium (2025). *UniProt: the Universal Protein Knowledge Base.* Nucleic Acids Research |
-| logomaker | Tareen, A. & Kinney, J.B. (2020). *Logomaker: beautiful sequence logos in Python.* Bioinformatics |
-
----
-
-<div align="center">
-
-*Laboratory of Bioinformatics II · Module 2 · International Master in Bioinformatics*  
-*University of Bologna · A.Y. 2025–2026*  
-*Supervisor: Prof. Castrense Savojardo · Biocomputing Group*
-
-</div>
